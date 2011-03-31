@@ -11,7 +11,7 @@
 #include <cstdlib>
 
 class Server;
-class client;
+class Client;
 typedef Server* server_raw_ptr;
 
 static std::string get_origin( std::string& buffer )
@@ -151,13 +151,13 @@ std::string create_client_key( std::string& buffer )
 	return std::string( reinterpret_cast< char* >( hash ) );
 }
 
-class client
+class Client
 {
 public:
-	typedef std::shared_ptr< client > ptr;
-	client( boost::asio::io_service& );
-	client( boost::asio::io_service&, server_raw_ptr const );
-	~client();
+	typedef std::shared_ptr< Client > ptr;
+	Client( boost::asio::io_service& );
+	Client( boost::asio::io_service&, server_raw_ptr const );
+	~Client();
 	static ptr create( boost::asio::io_service& );
 	static ptr create( boost::asio::io_service&, server_raw_ptr const );
 
@@ -184,63 +184,63 @@ public:
 	typedef Server* raw_ptr;
 	typedef std::shared_ptr< Server > ptr;
 	typedef std::vector< char > byte_array;
-	typedef void ( *client_message_handler )( raw_ptr, client::ptr, byte_array& );
+	typedef void ( *client_message_handler )( raw_ptr, Client::ptr, byte_array& );
 	Server( boost::asio::io_service& io_service, const char* host, unsigned short port,
 		client_message_handler client_message_handler_cb );
-	std::vector< client::ptr >& client_list();
-	void remove_client( std::vector< client::ptr >::iterator iter );
+	std::vector< Client::ptr >& client_list();
+	void remove_client( std::vector< Client::ptr >::iterator iter );
 
 private:
-	std::vector< client::ptr > client_list_;
+	std::vector< Client::ptr > client_list_;
 	boost::asio::io_service& io_service_;
 	boost::asio::ip::tcp::acceptor acceptor_;
 	std::string host_;
 	unsigned short port_;
 	client_message_handler client_message_handler_cb_;
-	client::ptr current_client_ptr_;
+	Client::ptr current_client_ptr_;
 
 	void start_accept();
 	void handle_accept( const boost::system::error_code& );
 };
 
-client::client( boost::asio::io_service& io_service )
+Client::Client( boost::asio::io_service& io_service )
 	: socket_( io_service ), handshake_( false ) { }
 
-client::client( boost::asio::io_service& io_service, server_raw_ptr const server )
+Client::Client( boost::asio::io_service& io_service, server_raw_ptr const server )
 	: socket_( io_service ), server_( server ), handshake_( false ) { }
 
-client::~client() { }
+Client::~Client() { }
 
-client::ptr client::create( boost::asio::io_service& io_service )
+Client::ptr Client::create( boost::asio::io_service& io_service )
 {
-	return client::ptr( new client( io_service ) );
+	return Client::ptr( new Client( io_service ) );
 }
 
-client::ptr client::create( boost::asio::io_service& io_service,
+Client::ptr Client::create( boost::asio::io_service& io_service,
 	server_raw_ptr const server )
 {
-	return client::ptr( new client( io_service, server ) );
+	return Client::ptr( new Client( io_service, server ) );
 }
 
-boost::asio::ip::tcp::socket& client::socket()
+boost::asio::ip::tcp::socket& Client::socket()
 {
 	return socket_;
 }
 
-void client::start()
+void Client::start()
 {
 	start_read();
 }
 
-void client::start_read()
+void Client::start_read()
 {
 	socket_.async_receive( boost::asio::buffer( read_raw_buffer_, 4096 ),
-		boost::bind( &client::handle_read, this,
+		boost::bind( &Client::handle_read, this,
 			boost::asio::placeholders::error,
 			boost::asio::placeholders::bytes_transferred ) );
 }
 
-std::vector< uint8_t > client::wrap( std::string& data )
+std::vector< uint8_t > Client::wrap( std::string& data )
 {
 	std::vector< uint8_t > tmp_data;
 	tmp_data.push_back( '\x00' );
@@ -250,7 +250,7 @@ std::vector< uint8_t > client::wrap( std::string& data )
 	return tmp_data;
 }
 
-std::vector< uint8_t > client::wrap( std::stringstream& data )
+std::vector< uint8_t > Client::wrap( std::stringstream& data )
 {
 	std::vector< uint8_t > tmp_data;
 	std::string tmp_str = data.str();
@@ -262,7 +262,7 @@ std::vector< uint8_t > client::wrap( std::stringstream& data )
 	return tmp_data;
 }
 
-void client::handle_read( const boost::system::error_code& error,
+void Client::handle_read( const boost::system::error_code& error,
 	std::size_t bytes_transferred )
 {
 	// Do something with read
@@ -336,7 +336,7 @@ void client::handle_read( const boost::system::error_code& error,
 						write_buffer_.push_back( '\xFF' );
 						socket_.send( boost::asio::buffer( write_buffer_,
 							write_buffer_.size() ) );
-						for ( std::vector< client::ptr >::iterator iter =
+						for ( std::vector< Client::ptr >::iterator iter =
 							server_->client_list().begin();
 							iter != server_->client_list().end(); ++iter )
 						{
@@ -407,20 +407,20 @@ Server::Server( boost::asio::io_service& io_service, const char* host, unsigned 
 	start_accept();
 }
 
-std::vector< client::ptr >& Server::client_list()
+std::vector< Client::ptr >& Server::client_list()
 {
 	return client_list_;
 }
 
-void Server::remove_client( std::vector< client::ptr >::iterator iter )
+void Server::remove_client( std::vector< Client::ptr >::iterator iter )
 {
-	io_service_.post( boost::bind( &std::vector< client::ptr >::erase, &client_list_,
+	io_service_.post( boost::bind( &std::vector< Client::ptr >::erase, &client_list_,
 		iter ) );
 }
 
 void Server::start_accept()
 {
-	current_client_ptr_ = client::create( io_service_, this );
+	current_client_ptr_ = Client::create( io_service_, this );
 	acceptor_.async_accept( current_client_ptr_->socket(),
 		boost::bind( &Server::handle_accept, this, boost::asio::placeholders::error ) );
 }
