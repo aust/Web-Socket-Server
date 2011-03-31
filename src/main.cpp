@@ -14,7 +14,7 @@ class Server;
 class Client;
 typedef Server* server_raw_ptr;
 
-static std::string get_origin( std::string& buffer )
+static std::string GetOrigin( std::string& buffer )
 {
 	size_t pos = buffer.find( "Origin: " ) + sizeof( "Origin: " ) - 1;
 	if ( pos == std::string::npos )
@@ -24,7 +24,7 @@ static std::string get_origin( std::string& buffer )
 		buffer.find( "\r\n", pos ) );
 }
 // Sec-WebSocket-Key1
-uint32_t get_key1( std::string& buffer )
+uint32_t GetKey1( std::string& buffer )
 {
 	size_t pos = buffer.find( "Sec-WebSocket-Key1: " );
 	if ( pos == std::string::npos )
@@ -54,7 +54,7 @@ uint32_t get_key1( std::string& buffer )
 }
 
 // Sec-WebSocket-Key2
-uint32_t get_key2( std::string& buffer )
+uint32_t GetKey2( std::string& buffer )
 {
 	size_t pos = buffer.find( "Sec-WebSocket-Key2: " );
 	if ( pos == std::string::npos )
@@ -83,9 +83,9 @@ uint32_t get_key2( std::string& buffer )
 	return key2 / space_count;
 }
 
-std::string create_client_key( std::string& buffer );
+std::string CreateClientKey( std::string& buffer );
 
-std::string get_host( std::string& buffer )
+std::string GetHost( std::string& buffer )
 {
 	size_t pos = buffer.find( "Host: " );
 	if ( pos == std::string::npos )
@@ -100,24 +100,24 @@ std::string get_host( std::string& buffer )
 		buffer.begin() + end_pos );
 }
 
-std::vector< uint8_t > create_server_handshake( std::string& buffer )
+std::vector<uint8_t> CreateServerHandshake( std::string& buffer )
 {
 	std::string tmp_handshake;
 
 	tmp_handshake = "HTTP/1.1 101 Web Socket Protocol Handshake\r\n"
 		"Upgrade: WebSocket\r\n"
 		"Connection: Upgrade\r\n"
-		"Sec-WebSocket-Origin: " + get_origin( buffer ) + "\r\n"
-		"Sec-WebSocket-Location: ws://" + get_host( buffer ) + "/\r\n\r\n"
-		+ create_client_key( buffer );
+		"Sec-WebSocket-Origin: " + GetOrigin( buffer ) + "\r\n"
+		"Sec-WebSocket-Location: ws://" + GetHost( buffer ) + "/\r\n\r\n"
+		+ CreateClientKey( buffer );
 	
-	std::vector< uint8_t > handshake( tmp_handshake.begin(),
+	std::vector<uint8_t> handshake( tmp_handshake.begin(),
 		tmp_handshake.end() );
 
 	return handshake;
 }
 
-std::string create_client_key( std::string& buffer )
+std::string CreateClientKey( std::string& buffer )
 {
 	size_t pos = buffer.find( "\r\n\r\n" );
 	if ( pos == std::string::npos )
@@ -127,13 +127,13 @@ std::string create_client_key( std::string& buffer )
 	if ( key.size() != 8 )
 		return std::string( "" );
 
-	uint32_t key1 = get_key1( buffer );
-	uint32_t key2 = get_key2( buffer );
+	uint32_t key1 = GetKey1( buffer );
+	uint32_t key2 = GetKey2( buffer );
 
 	if ( !key1 || !key2 )
 		return std::string( "" );
 
-	std::vector< uint8_t > unhashed_key;
+	std::vector<uint8_t> unhashed_key;
 	unhashed_key.push_back( ( key1 & 0xff000000 ) >> 24 );
 	unhashed_key.push_back( ( key1 & 0xff0000 ) >> 16 );
 	unhashed_key.push_back( ( key1 & 0xff00 ) >> 8 );
@@ -148,23 +148,23 @@ std::string create_client_key( std::string& buffer )
 	MD5( &unhashed_key[0], 16, hash );
 	hash[16] = '\0';
 
-	return std::string( reinterpret_cast< char* >( hash ) );
+	return std::string( reinterpret_cast<char*>( hash ) );
 }
 
 class Client
 {
 public:
-	typedef std::shared_ptr< Client > ptr;
+	typedef std::shared_ptr<Client> ptr;
 	Client( boost::asio::io_service& );
 	Client( boost::asio::io_service&, server_raw_ptr const );
 	~Client();
-	static ptr create( boost::asio::io_service& );
-	static ptr create( boost::asio::io_service&, server_raw_ptr const );
+	static ptr Create( boost::asio::io_service& );
+	static ptr Create( boost::asio::io_service&, server_raw_ptr const );
 
-	boost::asio::ip::tcp::socket& socket();
-	void start();
-	std::vector< uint8_t > wrap( std::string& data );
-	std::vector< uint8_t > wrap( std::stringstream& data );
+	boost::asio::ip::tcp::socket& Socket();
+	void Start();
+	std::vector<uint8_t> Wrap( std::string& data );
+	std::vector<uint8_t> Wrap( std::stringstream& data );
 
 private:
 	boost::asio::ip::tcp::socket socket_;
@@ -174,24 +174,24 @@ private:
 	bool handshake_;
 	uint32_t id_;
 	
-	void start_read();
-	void handle_read( const boost::system::error_code&, std::size_t );
+	void StartRead();
+	void HandleRead( const boost::system::error_code&, std::size_t );
 };
 
 class Server
 {
 public:
 	typedef Server* raw_ptr;
-	typedef std::shared_ptr< Server > ptr;
-	typedef std::vector< char > byte_array;
+	typedef std::shared_ptr<Server> ptr;
+	typedef std::vector<char> byte_array;
 	typedef void ( *client_message_handler )( raw_ptr, Client::ptr, byte_array& );
 	Server( boost::asio::io_service& io_service, const char* host, unsigned short port,
 		client_message_handler client_message_handler_cb );
-	std::vector< Client::ptr >& client_list();
-	void remove_client( std::vector< Client::ptr >::iterator iter );
+	std::vector<Client::ptr>& client_list();
+	void remove_client( std::vector<Client::ptr>::iterator iter );
 
 private:
-	std::vector< Client::ptr > client_list_;
+	std::vector<Client::ptr> client_list_;
 	boost::asio::io_service& io_service_;
 	boost::asio::ip::tcp::acceptor acceptor_;
 	std::string host_;
@@ -199,8 +199,8 @@ private:
 	client_message_handler client_message_handler_cb_;
 	Client::ptr current_client_ptr_;
 
-	void start_accept();
-	void handle_accept( const boost::system::error_code& );
+	void StartAccept();
+	void HandleAccept( const boost::system::error_code& );
 };
 
 Client::Client( boost::asio::io_service& io_service )
@@ -211,38 +211,38 @@ Client::Client( boost::asio::io_service& io_service, server_raw_ptr const server
 
 Client::~Client() { }
 
-Client::ptr Client::create( boost::asio::io_service& io_service )
+Client::ptr Client::Create( boost::asio::io_service& io_service )
 {
 	return Client::ptr( new Client( io_service ) );
 }
 
-Client::ptr Client::create( boost::asio::io_service& io_service,
+Client::ptr Client::Create( boost::asio::io_service& io_service,
 	server_raw_ptr const server )
 {
 	return Client::ptr( new Client( io_service, server ) );
 }
 
-boost::asio::ip::tcp::socket& Client::socket()
+boost::asio::ip::tcp::socket& Client::Socket()
 {
 	return socket_;
 }
 
-void Client::start()
+void Client::Start()
 {
-	start_read();
+	StartRead();
 }
 
-void Client::start_read()
+void Client::StartRead()
 {
 	socket_.async_receive( boost::asio::buffer( read_raw_buffer_, 4096 ),
-		boost::bind( &Client::handle_read, this,
+		boost::bind( &Client::HandleRead, this,
 			boost::asio::placeholders::error,
 			boost::asio::placeholders::bytes_transferred ) );
 }
 
-std::vector< uint8_t > Client::wrap( std::string& data )
+std::vector<uint8_t> Client::Wrap( std::string& data )
 {
-	std::vector< uint8_t > tmp_data;
+	std::vector<uint8_t> tmp_data;
 	tmp_data.push_back( '\x00' );
 	for ( size_t i = 0; i < data.size(); i++)
 		tmp_data.push_back( data[i] );
@@ -250,9 +250,9 @@ std::vector< uint8_t > Client::wrap( std::string& data )
 	return tmp_data;
 }
 
-std::vector< uint8_t > Client::wrap( std::stringstream& data )
+std::vector<uint8_t> Client::Wrap( std::stringstream& data )
 {
-	std::vector< uint8_t > tmp_data;
+	std::vector<uint8_t> tmp_data;
 	std::string tmp_str = data.str();
 
 	tmp_data.push_back( '\x00' );
@@ -262,7 +262,7 @@ std::vector< uint8_t > Client::wrap( std::stringstream& data )
 	return tmp_data;
 }
 
-void Client::handle_read( const boost::system::error_code& error,
+void Client::HandleRead( const boost::system::error_code& error,
 	std::size_t bytes_transferred )
 {
 	// Do something with read
@@ -272,8 +272,8 @@ void Client::handle_read( const boost::system::error_code& error,
 		{
 			read_buffer_.insert( read_buffer_.begin(), read_raw_buffer_,
 				read_raw_buffer_ + bytes_transferred );
-			std::vector< uint8_t > handshake =
-				create_server_handshake( read_buffer_ );
+			std::vector<uint8_t> handshake =
+				CreateServerHandshake( read_buffer_ );
 
 			socket_.send( boost::asio::buffer( handshake, handshake.size() ) );
 			handshake_ = true;
@@ -286,7 +286,7 @@ void Client::handle_read( const boost::system::error_code& error,
 			std::stringstream ss_reg;
 			ss_reg << "{\"cmd\":\"register\",\"data\":{\"id\":\""
 				<< id_ << "\"}}";
-			std::vector< uint8_t > reg_buf = wrap( ss_reg );
+			std::vector<uint8_t> reg_buf = Wrap( ss_reg );
 			socket_.send( boost::asio::buffer( reg_buf, reg_buf.size() ) );
 		}
 		else
@@ -330,13 +330,13 @@ void Client::handle_read( const boost::system::error_code& error,
 
 						// Callback . . .
 						std::cout << "Callback: '" << read_buffer_ << "'" << std::endl;
-						std::vector< uint8_t > write_buffer_( read_buffer_.begin(),
+						std::vector<uint8_t> write_buffer_( read_buffer_.begin(),
 							read_buffer_.end() );
 						write_buffer_.insert( write_buffer_.begin(), '\x00'  );
 						write_buffer_.push_back( '\xFF' );
 						socket_.send( boost::asio::buffer( write_buffer_,
 							write_buffer_.size() ) );
-						for ( std::vector< Client::ptr >::iterator iter =
+						for ( std::vector<Client::ptr>::iterator iter =
 							server_->client_list().begin();
 							iter != server_->client_list().end(); ++iter )
 						{
@@ -393,7 +393,7 @@ void Client::handle_read( const boost::system::error_code& error,
 		return;
 	}
 
-	start_read();
+	StartRead();
 }
 
 Server::Server( boost::asio::io_service& io_service, const char* host, unsigned short port,
@@ -404,36 +404,36 @@ Server::Server( boost::asio::io_service& io_service, const char* host, unsigned 
 	acceptor_.open( boost::asio::ip::tcp::v4() );
 	acceptor_.bind( boost::asio::ip::tcp::endpoint( boost::asio::ip::address::from_string( host ), port ) );
 	acceptor_.listen();
-	start_accept();
+	StartAccept();
 }
 
-std::vector< Client::ptr >& Server::client_list()
+std::vector<Client::ptr>& Server::client_list()
 {
 	return client_list_;
 }
 
-void Server::remove_client( std::vector< Client::ptr >::iterator iter )
+void Server::remove_client( std::vector<Client::ptr>::iterator iter )
 {
-	io_service_.post( boost::bind( &std::vector< Client::ptr >::erase, &client_list_,
+	io_service_.post( boost::bind( &std::vector<Client::ptr>::erase, &client_list_,
 		iter ) );
 }
 
-void Server::start_accept()
+void Server::StartAccept()
 {
-	current_client_ptr_ = Client::create( io_service_, this );
-	acceptor_.async_accept( current_client_ptr_->socket(),
-		boost::bind( &Server::handle_accept, this, boost::asio::placeholders::error ) );
+	current_client_ptr_ = Client::Create( io_service_, this );
+	acceptor_.async_accept( current_client_ptr_->Socket(),
+		boost::bind( &Server::HandleAccept, this, boost::asio::placeholders::error ) );
 }
 
-void Server::handle_accept( const boost::system::error_code& error )
+void Server::HandleAccept( const boost::system::error_code& error )
 {
 	if ( !error )
 	{
 		std::cout << "Client connected: " << client_list_.size() + 1 <<
 			" client(s) connected." << std::endl;	
 		client_list_.push_back( current_client_ptr_ );
-		current_client_ptr_->start();
-		start_accept();
+		current_client_ptr_->Start();
+		StartAccept();
 	}
 	else
 	{
