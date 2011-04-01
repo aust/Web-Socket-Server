@@ -1,6 +1,17 @@
 // Web Sockets Server
 // Copyright 2010 Austin Burrow
 //
+// Description
+//  The intention of http-utitilities is to offer basic parsing of the initial
+//  WebSocket communication. More specifically, http-utilities was created to
+//  aid in the parsing of the basic authentication headers that the client
+//  will send to the server during WebSocket initialization. Because we are trying 
+//  to maintain simplicity, most of the header attributes will be ignored
+//  except the bare essentials to establish a connectiong (Sec-WebSocket-Key1,
+//  etc.)
+//
+// License
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -13,6 +24,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 #ifndef HTTP_UTILITIES_H
 #define HTTP_UTILITIES_H
 #include <map>
@@ -22,6 +34,6 @@ namespace HTTP
 {
 	typedef std::map<std::string, std::string> HeaderFieldMap;
     
-    ParseHeaderString(std::string& http_header_string, HeaderFieldMap& fields);
+    bool ParseHeaderString(std::string& http_header_string, HeaderFieldMap& fields);
 };
 #endif
